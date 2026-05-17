@@ -1,0 +1,16 @@
+services:
+  google-ai-mode-api-wrapper:
+    build: .
+    container_name: google-ai-mode-api-wrapper
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      HEADLESS: "true"
+      USER_DATA_DIR: "/app/data/sessions/google-profile"
+      BROWSER_LOCALE: "it-IT"
+      BROWSER_TIMEZONE: "Europe/Rome"
+      BROWSER_USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+      AIMODE_URL: "https://www.google.com/aimode"
+    shm_size: "2gb"
+    restart: unless-stopped

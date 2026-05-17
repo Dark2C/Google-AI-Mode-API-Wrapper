@@ -1,0 +1,883 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Google AI Mode Wrapper</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --accent-dark: #1d4ed8;
+      --danger: #dc2626;
+      --danger-dark: #b91c1c;
+      --code: #111827;
+      --code-text: #e5e7eb;
+      --user: #e8f0fe;
+      --assistant: #f3f4f6;
+      --ok: #16a34a;
+      --warn: #ca8a04;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      padding: 18px 24px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1.2;
+    }
+
+    header p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--warn);
+      display: inline-block;
+    }
+
+    .dot.ok {
+      background: var(--ok);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 420px;
+      gap: 18px;
+      padding: 18px;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .panel-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-header h2 {
+      font-size: 15px;
+      margin: 0;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      background: #fafafa;
+    }
+
+    .tab {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #eff6ff;
+    }
+
+    .tab .close {
+      color: var(--muted);
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .chat-area {
+      height: calc(100vh - 260px);
+      min-height: 440px;
+      overflow: auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .empty {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      padding: 20px;
+    }
+
+    .message {
+      max-width: 86%;
+      border-radius: 16px;
+      padding: 12px 14px;
+      white-space: pre-wrap;
+      line-height: 1.45;
+      font-size: 14px;
+      border: 1px solid var(--border);
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: var(--user);
+      border-color: #c7d2fe;
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+      background: var(--assistant);
+    }
+
+    .meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .links {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+    }
+
+    .links a {
+      color: var(--accent);
+      word-break: break-word;
+    }
+
+    .composer {
+      border-top: 1px solid var(--border);
+      padding: 12px;
+      display: flex;
+      gap: 10px;
+      background: #fafafa;
+    }
+
+    textarea {
+      width: 100%;
+      resize: vertical;
+      min-height: 52px;
+      max-height: 180px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      font: inherit;
+      outline: none;
+      background: white;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    button {
+      border: 0;
+      background: var(--accent);
+      color: white;
+      padding: 10px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    button:hover {
+      background: var(--accent-dark);
+    }
+
+    button.secondary {
+      background: #e5e7eb;
+      color: var(--text);
+    }
+
+    button.secondary:hover {
+      background: #d1d5db;
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
+    button.danger:hover {
+      background: var(--danger-dark);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .api-list {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow: auto;
+    }
+
+    .endpoint {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .endpoint summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #fafafa;
+    }
+
+    .endpoint summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .method {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: white;
+      border-radius: 8px;
+      padding: 4px 7px;
+      background: #4b5563;
+      min-width: 56px;
+      text-align: center;
+    }
+
+    .method.get { background: #059669; }
+    .method.post { background: #2563eb; }
+    .method.delete { background: #dc2626; }
+
+    .path {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      word-break: break-word;
+    }
+
+    .endpoint-body {
+      padding: 12px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    pre {
+      background: var(--code);
+      color: var(--code-text);
+      padding: 12px;
+      border-radius: 12px;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: var(--code);
+      color: white;
+      padding: 12px 14px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+      display: none;
+      max-width: 420px;
+      z-index: 50;
+      font-size: 13px;
+    }
+
+    .toast.show {
+      display: block;
+    }
+
+    @media (max-width: 1000px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .api-list {
+        max-height: none;
+      }
+
+      .chat-area {
+        height: 55vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Google AI Mode Wrapper</h1>
+      <p>Local research UI for creating chat tabs, sending prompts, and inspecting the wrapper API.</p>
+    </div>
+    <div class="status">
+      <span id="statusDot" class="dot"></span>
+      <span id="statusText">Checking service...</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Chats</h2>
+        <div class="actions">
+          <button id="newChatBtn">New chat tab</button>
+          <button id="refreshBtn" class="secondary">Refresh conversation</button>
+        </div>
+      </div>
+
+      <div id="tabs" class="tabs"></div>
+
+      <div id="chatArea" class="chat-area">
+        <div class="empty">
+          <div>
+            <strong>No chat selected.</strong><br />
+            Create a new chat tab to begin.
+          </div>
+        </div>
+      </div>
+
+      <form id="composer" class="composer">
+        <textarea id="messageInput" placeholder="Type a message..." disabled></textarea>
+        <button id="sendBtn" type="submit" disabled>Send</button>
+      </form>
+    </section>
+
+    <aside class="panel">
+      <div class="panel-header">
+        <h2>API reference</h2>
+        <div class="actions">
+          <button id="healthBtn" class="secondary">Run /health</button>
+        </div>
+      </div>
+      <div id="apiList" class="api-list"></div>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const state = {
+      chats: [],
+      activeChatId: null,
+      busy: false
+    };
+
+    const endpoints = [
+      {
+        method: 'GET',
+        path: '/health',
+        description: 'Returns service status and browser environment configuration.',
+        fetch: `fetch('/health').then(r => r.json())`
+      },
+      {
+        method: 'POST',
+        path: '/chat/new',
+        description: 'Creates a new AI Mode browser tab/session and returns a chatId.',
+        fetch: `fetch('/chat/new', { method: 'POST' }).then(r => r.json())`
+      },
+      {
+        method: 'POST',
+        path: '/chat/:chatId/message',
+        description: 'Sends a message to an existing chat and returns the latest assistant response.',
+        fetch: `fetch('/chat/<CHAT_ID>/message', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ message: 'Hello, world!' })
+}).then(r => r.json())`
+      },
+      {
+        method: 'GET',
+        path: '/chat/:chatId/last',
+        description: 'Returns the last parsed conversation item for a chat.',
+        fetch: `fetch('/chat/<CHAT_ID>/last').then(r => r.json())`
+      },
+      {
+        method: 'GET',
+        path: '/chat/:chatId/all',
+        description: 'Returns the full parsed conversation for a chat.',
+        fetch: `fetch('/chat/<CHAT_ID>/all').then(r => r.json())`
+      },
+      {
+        method: 'DELETE',
+        path: '/chat/:chatId',
+        description: 'Closes the browser tab associated with the chat and removes it from memory.',
+        fetch: `fetch('/chat/<CHAT_ID>', { method: 'DELETE' }).then(r => r.json())`
+      }
+    ];
+
+    const tabsEl = document.getElementById('tabs');
+    const chatAreaEl = document.getElementById('chatArea');
+    const messageInputEl = document.getElementById('messageInput');
+    const sendBtnEl = document.getElementById('sendBtn');
+    const composerEl = document.getElementById('composer');
+    const newChatBtnEl = document.getElementById('newChatBtn');
+    const refreshBtnEl = document.getElementById('refreshBtn');
+    const healthBtnEl = document.getElementById('healthBtn');
+    const statusDotEl = document.getElementById('statusDot');
+    const statusTextEl = document.getElementById('statusText');
+    const apiListEl = document.getElementById('apiList');
+    const toastEl = document.getElementById('toast');
+
+    function activeChat() {
+      return state.chats.find(chat => chat.chatId === state.activeChatId) ?? null;
+    }
+
+    function setBusy(value) {
+      state.busy = value;
+      newChatBtnEl.disabled = value;
+      refreshBtnEl.disabled = value || !state.activeChatId;
+      messageInputEl.disabled = value || !state.activeChatId;
+      sendBtnEl.disabled = value || !state.activeChatId;
+    }
+
+    function showToast(message, timeout = 3500) {
+      toastEl.textContent = message;
+      toastEl.classList.add('show');
+
+      window.clearTimeout(showToast._timeout);
+      showToast._timeout = window.setTimeout(() => {
+        toastEl.classList.remove('show');
+      }, timeout);
+    }
+
+    async function requestJson(path, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options.headers || {})
+        }
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(data?.error || `HTTP ${res.status} on ${path}`);
+      }
+
+      return data;
+    }
+
+    function renderTabs() {
+      tabsEl.innerHTML = '';
+
+      if (state.chats.length === 0) {
+        const placeholder = document.createElement('button');
+        placeholder.className = 'tab';
+        placeholder.textContent = 'No open tabs';
+        placeholder.disabled = true;
+        tabsEl.appendChild(placeholder);
+        return;
+      }
+
+      for (let index = 0; index < state.chats.length; index++) {
+        const chat = state.chats[index];
+        const tab = document.createElement('button');
+        tab.className = `tab ${chat.chatId === state.activeChatId ? 'active' : ''}`;
+        tab.type = 'button';
+
+        const label = document.createElement('span');
+        label.textContent = chat.title || `Chat ${index + 1}`;
+
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'close';
+        close.textContent = '×';
+        close.title = 'Close chat';
+        close.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          await closeChat(chat.chatId);
+        });
+
+        tab.appendChild(label);
+        tab.appendChild(close);
+
+        tab.addEventListener('click', () => {
+          state.activeChatId = chat.chatId;
+          render();
+        });
+
+        tabsEl.appendChild(tab);
+      }
+    }
+
+    function renderChat() {
+      const chat = activeChat();
+
+      chatAreaEl.innerHTML = '';
+
+      if (!chat) {
+        chatAreaEl.innerHTML = `
+          <div class="empty">
+            <div>
+              <strong>No chat selected.</strong><br />
+              Create a new chat tab to begin.
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (!chat.messages || chat.messages.length === 0) {
+        chatAreaEl.innerHTML = `
+          <div class="empty">
+            <div>
+              <strong>${escapeHtml(chat.title || 'New chat')}</strong><br />
+              Send your first message.
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      for (const item of chat.messages) {
+        if (item.userText) {
+          chatAreaEl.appendChild(createMessage('user', item.userText));
+        }
+
+        if (item.botText) {
+          chatAreaEl.appendChild(createMessage('assistant', item.botText, item.links));
+        }
+      }
+
+      chatAreaEl.scrollTop = chatAreaEl.scrollHeight;
+    }
+
+    function createMessage(role, text, links = []) {
+      const msg = document.createElement('div');
+      msg.className = `message ${role}`;
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = role === 'user' ? 'You' : 'Google AI Mode';
+
+      const body = document.createElement('div');
+      body.textContent = text;
+
+      msg.appendChild(meta);
+      msg.appendChild(body);
+
+      const cleanLinks = (links || []).filter(link => link.href);
+
+      if (cleanLinks.length > 0) {
+        const linksEl = document.createElement('div');
+        linksEl.className = 'links';
+
+        for (const link of cleanLinks) {
+          const a = document.createElement('a');
+          a.href = link.href;
+          a.target = '_blank';
+          a.rel = 'noreferrer';
+          a.textContent = link.text || link.href;
+          linksEl.appendChild(a);
+        }
+
+        msg.appendChild(linksEl);
+      }
+
+      return msg;
+    }
+
+    function renderApiDocs() {
+      apiListEl.innerHTML = '';
+
+      for (const endpoint of endpoints) {
+        const details = document.createElement('details');
+        details.className = 'endpoint';
+
+        const methodClass = endpoint.method.toLowerCase();
+
+        details.innerHTML = `
+          <summary>
+            <span class="method ${methodClass}">${endpoint.method}</span>
+            <span class="path">${endpoint.path}</span>
+          </summary>
+          <div class="endpoint-body">
+            <p>${escapeHtml(endpoint.description)}</p>
+            <pre>${escapeHtml(endpoint.fetch)}</pre>
+          </div>
+        `;
+
+        apiListEl.appendChild(details);
+      }
+    }
+
+    function render() {
+      renderTabs();
+      renderChat();
+
+      const hasActive = Boolean(state.activeChatId);
+      messageInputEl.disabled = state.busy || !hasActive;
+      sendBtnEl.disabled = state.busy || !hasActive;
+      refreshBtnEl.disabled = state.busy || !hasActive;
+    }
+
+    async function checkHealth() {
+      try {
+        const data = await requestJson('/health');
+
+        statusDotEl.classList.add('ok');
+        statusTextEl.textContent = `Service ready · ${data.browserLocale} · ${data.browserTimezone}`;
+        return data;
+      } catch (error) {
+        statusDotEl.classList.remove('ok');
+        statusTextEl.textContent = 'Service unavailable';
+        throw error;
+      }
+    }
+
+    async function createChat() {
+      setBusy(true);
+
+      try {
+        const chat = await requestJson('/chat/new', {
+          method: 'POST'
+        });
+
+        state.chats.push({
+          ...chat,
+          title: `Chat ${state.chats.length + 1}`,
+          messages: []
+        });
+
+        state.activeChatId = chat.chatId;
+        showToast('New chat created');
+        render();
+      } catch (error) {
+        showToast(`Failed to create chat: ${error.message}`, 6000);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function sendMessage(message) {
+      const chat = activeChat();
+
+      if (!chat) {
+        showToast('Create a chat first');
+        return;
+      }
+
+      setBusy(true);
+
+      const optimistic = {
+        userText: message,
+        botText: 'Waiting for response...',
+        links: []
+      };
+
+      chat.messages.push(optimistic);
+      render();
+
+      try {
+        const data = await requestJson(`/chat/${chat.chatId}/message`, {
+          method: 'POST',
+          body: JSON.stringify({ message })
+        });
+
+        const last = data.lastMessage ?? {
+          userText: message,
+          botText: '',
+          links: []
+        };
+
+        optimistic.userText = last.userText || message;
+        optimistic.botText = last.botText || '';
+        optimistic.links = last.links || [];
+
+        if (chat.messages.length === 1) {
+          chat.title = shortTitle(message);
+        }
+
+        render();
+      } catch (error) {
+        optimistic.botText = `Error: ${error.message}`;
+        render();
+        showToast(`Send failed: ${error.message}`, 6000);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function refreshConversation() {
+      const chat = activeChat();
+
+      if (!chat) {
+        return;
+      }
+
+      setBusy(true);
+
+      try {
+        const data = await requestJson(`/chat/${chat.chatId}/all`);
+        chat.messages = data.conversation || [];
+        render();
+        showToast('Conversation refreshed');
+      } catch (error) {
+        showToast(`Refresh failed: ${error.message}`, 6000);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function closeChat(chatId) {
+      setBusy(true);
+
+      try {
+        await requestJson(`/chat/${chatId}`, {
+          method: 'DELETE'
+        });
+
+        const index = state.chats.findIndex(chat => chat.chatId === chatId);
+        state.chats = state.chats.filter(chat => chat.chatId !== chatId);
+
+        if (state.activeChatId === chatId) {
+          const nextChat = state.chats[index] || state.chats[index - 1] || state.chats[0] || null;
+          state.activeChatId = nextChat?.chatId || null;
+        }
+
+        showToast('Chat closed');
+        render();
+      } catch (error) {
+        showToast(`Close failed: ${error.message}`, 6000);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function shortTitle(value) {
+      const text = String(value || '').replace(/\s+/g, ' ').trim();
+
+      if (!text) return 'Chat';
+
+      return text.length > 28 ? `${text.slice(0, 28)}...` : text;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    composerEl.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const message = messageInputEl.value.trim();
+
+      if (!message) {
+        return;
+      }
+
+      messageInputEl.value = '';
+      await sendMessage(message);
+    });
+
+    messageInputEl.addEventListener('keydown', async (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        composerEl.requestSubmit();
+      }
+    });
+
+    newChatBtnEl.addEventListener('click', createChat);
+    refreshBtnEl.addEventListener('click', refreshConversation);
+
+    healthBtnEl.addEventListener('click', async () => {
+      try {
+        const data = await checkHealth();
+        showToast(JSON.stringify(data, null, 2), 7000);
+      } catch (error) {
+        showToast(`Health check failed: ${error.message}`, 6000);
+      }
+    });
+
+    renderApiDocs();
+    render();
+
+    checkHealth().catch((error) => {
+      showToast(`Health check failed: ${error.message}`, 6000);
+    });
+  </script>
+</body>
+</html>
